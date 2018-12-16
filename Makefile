@@ -3,6 +3,10 @@
 export GO111MODULE = on
 export GOARCH ?=
 
+GO ?= go
+
+LDFLAGS ?= -s -w
+
 ifeq ($(GOARCH),)
 BINNAME = wolssh
 else
@@ -12,16 +16,16 @@ endif
 all: build
 
 build:
-	go build -v -mod=vendor -o $(BINNAME)
+	$(GO) build -v -mod=vendor -ldflags="$(LDFLAGS)" -o $(BINNAME) $(BUILDFLAGS)
 
 clean:
 	rm -f $(BINNAME)
 
 goclean: clean
-	go clean -cache
+	$(GO) clean -cache
 
 mod:
-	go mod tidy -v
-	go mod vendor -v
+	$(GO) mod tidy -v
+	$(GO) mod vendor -v
 
 .PHONY: all build clean goclean mod
