@@ -26,7 +26,9 @@ func NewServer() (Server) {
 }
 
 func (s *Server) LoadHostKeys(keyDir string) {
-    var keyTypes = [...]string{"rsa", "dsa", "ecdsa"}
+    //var keyTypes = [...]string{"rsa", "dsa", "ecdsa"}
+    // somehow DSA and ECDSA keys broke while I was asleep
+    var keyTypes = [...]string{"rsa"}
 
     foundKey := false
     for _, t := range keyTypes {
