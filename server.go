@@ -13,15 +13,27 @@ import (
 
 type Server struct {
     config      ssh.ServerConfig
-    pubKeys     []ssh.PublicKey
+    pubKeysMap  map[string]string
 }
 
 func NewServer() (Server) {
     s := Server{
-        config: ssh.ServerConfig{
-            PublicKeyCallback: keyAuthCallback,
-        },
+        config:     ssh.ServerConfig{},
+        pubKeysMap: map[string]string{},
     }
+
+    s.config.PublicKeyCallback = func(conn ssh.ConnMetadata, pubKey ssh.PublicKey) (*ssh.Permissions, error) {
+        if comment, ok := s.pubKeysMap[string(pubKey.Marshal())]; ok {
+            return &ssh.Permissions{
+                Extensions: map[string]string{
+                    "pubkey-fp": ssh.FingerprintSHA256(pubKey),
+                    "pubkey-comment": comment,
+                },
+            }, nil
+        }
+        return nil, fmt.Errorf("unknown public key for %q", conn.User())
+    }
+
     return s
 }
 
@@ -42,7 +54,7 @@ func (s *Server) LoadHostKeys(keyDir string) {
 
             key, err := ssh.ParsePrivateKey(keyData)
             if err != nil {
-                log.Fatal("Failed to parse private key from file '%s': %s", keyPath, err)
+                log.Fatal("Failed to parse private key '%s': %s", keyPath, err)
             }
 
             s.config.AddHostKey(key)
@@ -53,6 +65,30 @@ func (s *Server) LoadHostKeys(keyDir string) {
 
     if !foundKey {
         log.Fatal("Couldn't find any host keys in directory '%s'", keyDir)
+    }
+}
+
+func (s *Server) LoadAuthorizedKeys(keyFile string) {
+    data, err := ioutil.ReadFile(keyFile)
+    if err != nil {
+        log.Fatal("Failed to read authorized_keys file '%s'", keyFile)
+    }
+
+    count := 0
+    for len(data) > 0 {
+        pubKey, comment, _, rest, err := ssh.ParseAuthorizedKey(data)
+        if err != nil {
+            log.Fatal("Failed to parse authorized_keys file '%s': %s", keyFile, err)
+        }
+        log.Debug("Loaded authorized public key %s", comment)
+        s.pubKeysMap[string(pubKey.Marshal())] = comment
+        data = rest
+        count++
+    }
+    if count == 0 {
+        log.Warning("Didn't load any authorized public keys!")
+    } else {
+        log.Info("Loaded %d authorized keys", count)
     }
 }
 
@@ -76,37 +112,32 @@ func (s *Server) Listen(listenAddr string) {
                 log.Error("SSH Handshake error: %v", err)
                 return
             }
-            log.Debug("Connection from %s (%s)", sshConn.RemoteAddr(), sshConn.ClientVersion())
+            //log.Debug("Connection from %q for user %q with key %q (%s)",
+            //          sshConn.RemoteAddr(), sshConn.User(), sshConn.Permissions.Extensions["pubkey-fp"],
+            //          sshConn.Permissions.Extensions["pubkey-comment"])
+            log.Debug("Connection from %q for user %q with key (%s)",
+                      sshConn.RemoteAddr(), sshConn.User(), sshConn.Permissions.Extensions["pubkey-comment"])
 
             go ssh.DiscardRequests(reqs)
-            go handleChannels(chans)
+            for newChannel := range chans {
+                if t := newChannel.ChannelType(); t != "session" {
+                    newChannel.Reject(ssh.UnknownChannelType, fmt.Sprintf("unknown channel type: %s", t))
+                    continue
+                }
+
+                channel, requests, err := newChannel.Accept()
+                if err != nil {
+                    log.Error("could not accept channel: %s", err)
+                    continue
+                }
+
+                go handleChannelRequests(channel, requests)
+            }
         }()
     }
 }
 
-func keyAuthCallback(conn ssh.ConnMetadata, key ssh.PublicKey) (*ssh.Permissions, error) {
-    log.Debug("Auth connection from %s with public key type %s", conn.RemoteAddr(), key.Type())
-    return nil, nil
-}
-
-func handleChannels(chans <-chan ssh.NewChannel) {
-    for newChannel := range chans {
-        if t := newChannel.ChannelType(); t != "session" {
-            newChannel.Reject(ssh.UnknownChannelType, fmt.Sprintf("unknown channel type: %s", t))
-            continue
-        }
-
-        channel, requests, err := newChannel.Accept()
-        if err != nil {
-            log.Error("could not accept channel: %s", err)
-            continue
-        }
-
-        go handleChannelRequest(channel, requests)
-    }
-}
-
-func handleChannelRequest(channel ssh.Channel, reqs <-chan *ssh.Request) {
+func handleChannelRequests(channel ssh.Channel, reqs <-chan *ssh.Request) {
     defer channel.Close()
     for req := range reqs {
         ok := false

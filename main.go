@@ -3,6 +3,7 @@ package main
 import (
     "flag"
     "strings"
+    "path/filepath"
 )
 
 var log *WolSshLogger
@@ -30,5 +31,6 @@ func main() {
 
     server := NewServer()
     server.LoadHostKeys(*pSshDir)
+    server.LoadAuthorizedKeys(filepath.Join(*pSshDir, "authorized_keys"))
     server.Listen(listenAddr)
 }
