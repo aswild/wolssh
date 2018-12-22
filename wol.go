@@ -30,7 +30,8 @@ func SendWol(mac string) (error) {
         return fmt.Errorf("Failed to marshal magic packet: %s", err)
     }
 
-    baddr, err := net.ResolveUDPAddr("udp4", "255.255.255.255:40000")
+    //baddr, err := net.ResolveUDPAddr("udp4", "255.255.255.255:40000")
+    baddr, err := net.ResolveUDPAddr("udp4", "192.168.0.255:40000")
     if err != nil {
         return fmt.Errorf("Failed to resolve UDP broadcast address: %s", err)
     }
