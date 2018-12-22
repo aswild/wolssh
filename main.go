@@ -29,11 +29,6 @@ func main() {
         listenAddr = ":" + listenAddr
     }
 
-    log.Info("Sending test packet")
-    if err := SendWol("1c:87:2c:55:89:12"); err != nil {
-        log.Error("Failed to send WOL packet: %s", err)
-    }
-
     server := NewServer()
     server.LoadHostKeys(*pSshDir)
     server.LoadAuthorizedKeys(filepath.Join(*pSshDir, "authorized_keys"))
