@@ -140,24 +140,27 @@ func (s *Server) Listen(listenAddr string) {
 func handleChannelRequests(channel ssh.Channel, reqs <-chan *ssh.Request) {
     defer channel.Close()
     for req := range reqs {
+        exitStatus := byte(1)
         ok := false
         switch req.Type {
             case "exec":
                 cmd := string(req.Payload[4:4+req.Payload[3]])
                 log.Info("request to execute command '%s'", cmd)
-                io.WriteString(channel, fmt.Sprintf("You requested to execute command '%s'\n", cmd))
+                var resp string
+                resp, exitStatus = HandleWolCmd(cmd)
+                io.WriteString(channel, fmt.Sprintf("%s\n", resp))
                 ok = true
 
             case "shell":
                 log.Info("request shell")
-                io.WriteString(channel, "You requested a shell\n")
+                io.WriteString(channel, "Sorry, you requested a shell, but that's not allowed.\n" )
                 ok = true
 
             default:
                 log.Info("request other channel type: %s", req.Type)
         }
         req.Reply(ok, nil)
-        channel.SendRequest("exit-status", false, []byte{0, 0, 0, 0})
+        channel.SendRequest("exit-status", false, []byte{0, 0, 0, exitStatus})
         if ok {
             return
         }

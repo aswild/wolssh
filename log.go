@@ -40,7 +40,7 @@ func (l *WolSshLogger) vlog(level LogLevel, format string, v ...interface{}) {
         //    flags = flags | golog.Lshortfile
         //}
         //l.logger.SetFlags(flags)
-        msg := fmt.Sprintf("[%s] ", logLevelStrings[level]) +  fmt.Sprintf(format, v...)
+        msg := fmt.Sprintf("[%s] ", logLevelStrings[level]) + fmt.Sprintf(format, v...)
         l.logger.Output(3, msg)
     }
 }
