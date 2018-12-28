@@ -38,29 +38,28 @@ func NewServer() (Server) {
 }
 
 func (s *Server) LoadHostKeys(keyDir string) {
-    //var keyTypes = [...]string{"rsa", "dsa", "ecdsa"}
-    // somehow DSA and ECDSA keys broke while I was asleep
-    var keyTypes = [...]string{"rsa"}
+    keyTypes := [...]string{"rsa", "dsa", "ecdsa", "ed25519"}
 
     foundKey := false
     for _, t := range keyTypes {
         keyName := "ssh_host_" + t + "_key"
         keyPath := filepath.Join(keyDir, keyName)
-        if _, err := os.Stat(keyPath); !os.IsNotExist(err) {
-            keyData, err := ioutil.ReadFile(keyPath)
-            if err != nil {
-                log.Fatal("Failed to read file '%s': %s", keyPath, err)
+        keyData, err := ioutil.ReadFile(keyPath)
+        if err != nil {
+            if !os.IsNotExist(err) {
+                log.Error("Failed to read host key: %s", err)
             }
-
-            key, err := ssh.ParsePrivateKey(keyData)
-            if err != nil {
-                log.Fatal("Failed to parse private key '%s': %s", keyPath, err)
-            }
-
-            s.config.AddHostKey(key)
-            foundKey = true
-            log.Debug("Added server host key type %s from %s ", t, keyPath)
+            continue
         }
+
+        key, err := ssh.ParsePrivateKey(keyData)
+        if err != nil {
+            log.Error("Failed to parse private key '%s': %s", keyPath, err)
+        }
+
+        s.config.AddHostKey(key)
+        foundKey = true
+        log.Info("Loaded host key type %s", t)
     }
 
     if !foundKey {
