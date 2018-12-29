@@ -6,6 +6,7 @@ import (
     "path/filepath"
 )
 
+var version string = "v0.0.0"
 var log *WolSshLogger
 
 func main() {
