@@ -4,8 +4,10 @@ import (
     "flag"
     "fmt"
     "os"
+    "os/signal"
     "path/filepath"
     "strings"
+    "syscall"
 )
 
 var version string = "v0.0.0"
@@ -62,6 +64,15 @@ func main() {
     }
 
     log = NewLogger(level, opts.logStderr, opts.logFile, syslogConfig)
+
+    // signal handling
+    sighupChan := make(chan os.Signal, 1)
+    signal.Notify(sighupChan, syscall.SIGHUP)
+    go func() {
+        <-sighupChan
+        log.SetLogFile(opts.logFile)
+        log.Info("Caught SIGHUP, log file reopened")
+    }()
 
     if !strings.Contains(opts.listenAddr, ":") {
         opts.listenAddr = ":" + opts.listenAddr
