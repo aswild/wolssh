@@ -46,7 +46,7 @@ func NewServer() (Server) {
 
 func (s *Server) authPublicKey(conn ssh.ConnMetadata, pubKey ssh.PublicKey) (*ssh.Permissions, error) {
     if conn.User() != s.username {
-        return nil, fmt.Errorf("invalid user: %q", conn.User())
+        return nil, fmt.Errorf("connection from %v: invalid user: %q", conn.RemoteAddr(), conn.User())
     }
     if comment, ok := s.pubKeysMap[string(pubKey.Marshal())]; ok {
         return &ssh.Permissions{
@@ -56,7 +56,7 @@ func (s *Server) authPublicKey(conn ssh.ConnMetadata, pubKey ssh.PublicKey) (*ss
             },
         }, nil
     }
-    return nil, fmt.Errorf("unknown public key for %q", conn.User())
+    return nil, fmt.Errorf("connection from %v: unknown public key for %q", conn.RemoteAddr(), conn.User())
 }
 
 func (s *Server) LoadHostKeys(keyDir string) {
