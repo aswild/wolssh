@@ -23,7 +23,9 @@ func NewServer() (Server) {
     s := Server{
         config:     ssh.ServerConfig{},
         pubKeysMap: map[string]string{},
+
     }
+    s.config.PublicKeyCallback = s.authPublicKey
 
     if currentUser, err := user.Current(); err == nil {
         s.username = currentUser.Username
@@ -32,22 +34,22 @@ func NewServer() (Server) {
         log.Warning("Unable to get current user info, using default '%s'", s.username)
     }
 
-    s.config.PublicKeyCallback = func(conn ssh.ConnMetadata, pubKey ssh.PublicKey) (*ssh.Permissions, error) {
-        if conn.User() != s.username {
-            return nil, fmt.Errorf("unknown user: %q", conn.User())
-        }
-        if comment, ok := s.pubKeysMap[string(pubKey.Marshal())]; ok {
-            return &ssh.Permissions{
-                Extensions: map[string]string{
-                    "pubkey-fp": ssh.FingerprintSHA256(pubKey),
-                    "pubkey-comment": comment,
-                },
-            }, nil
-        }
-        return nil, fmt.Errorf("unknown public key for %q", conn.User())
-    }
-
     return s
+}
+
+func (s *Server) authPublicKey(conn ssh.ConnMetadata, pubKey ssh.PublicKey) (*ssh.Permissions, error) {
+    if conn.User() != s.username {
+        return nil, fmt.Errorf("invalid user: %q", conn.User())
+    }
+    if comment, ok := s.pubKeysMap[string(pubKey.Marshal())]; ok {
+        return &ssh.Permissions{
+            Extensions: map[string]string{
+                "pubkey-fp": ssh.FingerprintSHA256(pubKey),
+                "pubkey-comment": comment,
+            },
+        }, nil
+    }
+    return nil, fmt.Errorf("unknown public key for %q", conn.User())
 }
 
 func (s *Server) LoadHostKeys(keyDir string) {
@@ -170,7 +172,7 @@ func handleChannelRequests(channel ssh.Channel, reqs <-chan *ssh.Request) {
                 ok = true
 
             default:
-                log.Info("request other channel type: %s", req.Type)
+                log.Info("request unknown channel type: %s", req.Type)
         }
         req.Reply(ok, nil)
         channel.SendRequest("exit-status", false, []byte{0, 0, 0, exitStatus})
