@@ -2,36 +2,49 @@ package main
 
 import (
     "flag"
-    "strings"
+    "fmt"
+    "os"
     "path/filepath"
+    "strings"
 )
 
 var version string = "v0.0.0"
-var log *WolSshLogger
+var log *WolSshLogger = NewWolSshLogger()
+
+var opts struct{
+    showVersion bool
+    debug       bool
+    logLevel    int
+    listenAddr  string
+    sshDir      string
+}
 
 func main() {
-
-    pListenAddr := flag.String("port", "2222", "Listen address/port, format [host:]port")
-    pSshDir := flag.String("sshdir", "ssh", "Directory containing SSH host keys and authorized_keys")
-    pLogLevel := flag.Int("loglevel", int(LOG_LEVEL_INFO),
-                                "Log level number: 0=fatal, 1=error, 2=warn, 3=info (default), 4=debug")
-    pDebug := flag.Bool("D", false, "Enable debug logging (same as -loglevel=4)")
+    flag.BoolVar(&opts.showVersion, "V", false, "Show version and exit")
+    flag.BoolVar(&opts.debug, "D", false, "Enable debug logging (same as -loglevel=4)")
+    flag.StringVar(&opts.listenAddr, "port", "2222", "Listen address/port, format [host:]port")
+    flag.StringVar(&opts.sshDir, "sshdir", "ssh", "Directory containing SSH host keys and authorized_keys")
+    flag.IntVar(&opts.logLevel, "loglevel", int(LOG_LEVEL_INFO),
+                "Log level number: 0=fatal, 1=error, 2=warn, 3=info (default), 4=debug")
 
     flag.Parse()
 
-    log = NewWolSshLogger()
-    log.level = LogLevel(*pLogLevel);
-    if *pDebug {
+    if opts.showVersion {
+        fmt.Println("wolssh version", version)
+        os.Exit(0)
+    }
+
+    log.level = LogLevel(opts.logLevel);
+    if opts.debug {
         log.level = LOG_LEVEL_DEBUG
     }
 
-    listenAddr := *pListenAddr
-    if !strings.Contains(listenAddr, ":") {
-        listenAddr = ":" + listenAddr
+    if !strings.Contains(opts.listenAddr, ":") {
+        opts.listenAddr = ":" + opts.listenAddr
     }
 
     server := NewServer()
-    server.LoadHostKeys(*pSshDir)
-    server.LoadAuthorizedKeys(filepath.Join(*pSshDir, "authorized_keys"))
-    server.Listen(listenAddr)
+    server.LoadHostKeys(opts.sshDir)
+    server.LoadAuthorizedKeys(filepath.Join(opts.sshDir, "authorized_keys"))
+    server.Listen(opts.listenAddr)
 }
