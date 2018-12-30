@@ -6,6 +6,7 @@ import (
     "io/ioutil"
     "net"
     "os"
+    "os/user"
     "path/filepath"
     "strings"
 
@@ -15,6 +16,7 @@ import (
 type Server struct {
     config      ssh.ServerConfig
     pubKeysMap  map[string]string
+    username     string
 }
 
 func NewServer() (Server) {
@@ -23,7 +25,17 @@ func NewServer() (Server) {
         pubKeysMap: map[string]string{},
     }
 
+    if currentUser, err := user.Current(); err == nil {
+        s.username = currentUser.Username
+    } else {
+        s.username = "wol"
+        log.Warning("Unable to get current user info, using default '%s'", s.username)
+    }
+
     s.config.PublicKeyCallback = func(conn ssh.ConnMetadata, pubKey ssh.PublicKey) (*ssh.Permissions, error) {
+        if conn.User() != s.username {
+            return nil, fmt.Errorf("unknown user: %q", conn.User())
+        }
         if comment, ok := s.pubKeysMap[string(pubKey.Marshal())]; ok {
             return &ssh.Permissions{
                 Extensions: map[string]string{
