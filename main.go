@@ -78,7 +78,7 @@ func main() {
         opts.listenAddr = ":" + opts.listenAddr
     }
 
-    log.Info("Starting wolssh")
+    log.Info("Starting wolssh version %s", version)
     server := NewServer()
     server.LoadHostKeys(opts.sshDir)
     server.LoadAuthorizedKeys(filepath.Join(opts.sshDir, "authorized_keys"))

@@ -7,6 +7,7 @@ import (
     "net"
     "os"
     "path/filepath"
+    "strings"
 
     "golang.org/x/crypto/ssh"
 )
@@ -40,7 +41,7 @@ func NewServer() (Server) {
 func (s *Server) LoadHostKeys(keyDir string) {
     keyTypes := [...]string{"rsa", "dsa", "ecdsa", "ed25519"}
 
-    foundKey := false
+    foundKeys := make([]string, 0)
     for _, t := range keyTypes {
         keyName := "ssh_host_" + t + "_key"
         keyPath := filepath.Join(keyDir, keyName)
@@ -58,13 +59,14 @@ func (s *Server) LoadHostKeys(keyDir string) {
         }
 
         s.config.AddHostKey(key)
-        foundKey = true
-        log.Info("Loaded host key type %s", t)
+        foundKeys = append(foundKeys, t)
+        log.Debug("Loaded host key %s", keyPath)
     }
 
-    if !foundKey {
+    if len(foundKeys) == 0 {
         log.Fatal("Couldn't find any host keys in directory '%s'", keyDir)
     }
+    log.Info("Loaded SSH host keys: %s", strings.Join(foundKeys, ", "))
 }
 
 func (s *Server) LoadAuthorizedKeys(keyFile string) {
