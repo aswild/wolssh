@@ -13,7 +13,6 @@ import (
     "io/ioutil"
     "net"
     "os"
-    "os/user"
     "path/filepath"
     "strings"
 
@@ -21,31 +20,23 @@ import (
 )
 
 type Server struct {
+    Username    string
     config      ssh.ServerConfig
     pubKeysMap  map[string]string
-    username     string
 }
 
-func NewServer() (Server) {
+func NewServer() (*Server) {
     s := Server{
         config:     ssh.ServerConfig{},
         pubKeysMap: map[string]string{},
-
     }
     s.config.PublicKeyCallback = s.authPublicKey
 
-    if currentUser, err := user.Current(); err == nil {
-        s.username = currentUser.Username
-    } else {
-        s.username = "wol"
-        log.Warning("Unable to get current user info, using default '%s'", s.username)
-    }
-
-    return s
+    return &s
 }
 
 func (s *Server) authPublicKey(conn ssh.ConnMetadata, pubKey ssh.PublicKey) (*ssh.Permissions, error) {
-    if conn.User() != s.username {
+    if conn.User() != s.Username {
         return nil, fmt.Errorf("connection from %v: invalid user: %q", conn.RemoteAddr(), conn.User())
     }
     if comment, ok := s.pubKeysMap[string(pubKey.Marshal())]; ok {
@@ -120,7 +111,7 @@ func (s *Server) Listen(listenAddr string) {
         log.Fatal("Failed to listen on socket: %s", err)
     }
 
-    log.Info("listening on %s", listenAddr)
+    log.Info("listening on %s for user %q", listenAddr, s.Username)
     for {
         conn, err := socket.Accept()
         if err != nil {

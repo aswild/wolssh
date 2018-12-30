@@ -12,6 +12,7 @@ import (
     "fmt"
     "os"
     "os/signal"
+    "os/user"
     "path/filepath"
     "strings"
     "syscall"
@@ -31,6 +32,7 @@ var opts struct{
     syslogTag   string
     listenAddr  string
     sshDir      string
+    user        string
 }
 
 func main() {
@@ -38,6 +40,7 @@ func main() {
     flag.BoolVar(&opts.showVersion, "V", false, "Show version and exit")
     flag.StringVar(&opts.listenAddr, "port", "2222", "Listen address/port, format [host:]port")
     flag.StringVar(&opts.sshDir, "sshdir", "ssh", "Directory containing SSH host keys and authorized_keys")
+    flag.StringVar(&opts.user, "user", "", "SSH user to accept connections for (default current user)")
 
     // log options
     flag.BoolVar(&opts.debug, "D", false, "Enable debug logging (same as -loglevel=4)")
@@ -85,8 +88,26 @@ func main() {
         opts.listenAddr = ":" + opts.listenAddr
     }
 
+    if opts.user == "" {
+        currentUser, err := user.Current()
+        if err == nil {
+            opts.user = currentUser.Username
+        } else {
+            log.Warning("Unable to get current user info: %v", err)
+            envUser := os.Getenv("USER")
+            if envUser != "" {
+                log.Warning("Using USER %q from the environment", envUser)
+                opts.user = envUser
+            } else {
+                log.Warning("Using default user \"wol\"")
+                opts.user = "wol"
+            }
+        }
+    }
+
     log.Info("Starting wolssh version %s", version)
     server := NewServer()
+    server.Username = opts.user
     server.LoadHostKeys(opts.sshDir)
     server.LoadAuthorizedKeys(filepath.Join(opts.sshDir, "authorized_keys"))
     server.Listen(opts.listenAddr)

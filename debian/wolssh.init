@@ -29,7 +29,7 @@ if [ -f /etc/default/$NAME ]; then
     . /etc/default/$NAME
 fi
 
-OPTS="-port $PORT -sshdir $SSHDIR"
+OPTS="-user $USER -port $PORT -sshdir $SSHDIR"
 if [ "$DEBUG" = "yes" ]; then
     OPTS="$OPTS -D"
 fi
