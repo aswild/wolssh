@@ -2,9 +2,10 @@ package main
 
 import (
     "fmt"
+    "log/syslog"
     "os"
-
-    golog "log"
+    "sync"
+    "time"
 )
 
 type LogLevel int
@@ -20,48 +21,135 @@ const (
 // log level strings, must match order LogLevel values above
 var logLevelStrings = [...]string{"FATAL", "E", "W", "I", "D"}
 
-type WolSshLogger struct {
-    logger  *golog.Logger
+type Logger struct {
     level   LogLevel
+    stderr  bool
+    logfile *os.File
+    syslog  *syslog.Writer
+    mtx     sync.Mutex
 }
 
-func NewWolSshLogger() (*WolSshLogger) {
-    l := new(WolSshLogger)
-    l.logger = golog.New(os.Stderr, "", golog.Ldate | golog.Ltime)
-    l.level = LOG_LEVEL_DEBUG
-    return l
+type SyslogConfig struct {
+    facility int
+    tag      string
 }
 
-func (l *WolSshLogger) vlog(level LogLevel, format string, v ...interface{}) {
-    if level <= l.level {
-        //flags := golog.Ldate | golog.Ltime
-        //if level == LOG_LEVEL_FATAL || level == LOG_LEVEL_DEBUG {
-        //    // include file/line for fatal and debug logs
-        //    flags = flags | golog.Lshortfile
-        //}
-        //l.logger.SetFlags(flags)
-        msg := fmt.Sprintf("[%s] ", logLevelStrings[level]) + fmt.Sprintf(format, v...)
-        l.logger.Output(3, msg)
+func NewLogger(level LogLevel, stderr bool, logfile string, slc *SyslogConfig) (*Logger) {
+    l := Logger{level: level, stderr: stderr}
+    l.setLogFile(logfile)
+    l.setSyslog(slc)
+    return &l
+}
+
+func (l *Logger) Close() {
+    l.mtx.Lock()
+    defer l.mtx.Unlock()
+    if l.syslog != nil {
+        l.syslog.Close()
+        l.syslog = nil
+    }
+    if l.logfile != nil {
+        l.logfile.Close()
+        l.logfile = nil
     }
 }
 
-func (l *WolSshLogger) Fatal(format string, v ...interface{}) {
+// Open a new log file. The existing one will be closed.
+func (l *Logger) SetLogFile(logfile string) {
+    l.mtx.Lock()
+    defer l.mtx.Unlock()
+    l.setLogFile(logfile)
+}
+func (l *Logger) setLogFile(logfile string) {
+    if l.logfile != nil {
+        l.logfile.Close()
+        l.logfile = nil
+    }
+
+    if logfile != "" {
+        f, err := os.OpenFile(logfile, os.O_WRONLY | os.O_APPEND | os.O_CREATE, 0644)
+        if err != nil {
+            fmt.Fprintf(os.Stderr, "Failed to open log file: %s\n", err)
+            os.Exit(1)
+        }
+        l.logfile = f
+    }
+}
+
+// set the syslog facility
+func (l *Logger) SetSyslog(slc *SyslogConfig) {
+    l.mtx.Lock()
+    defer l.mtx.Unlock()
+    l.setSyslog(slc)
+}
+func (l *Logger) setSyslog(slc *SyslogConfig) {
+    if l.syslog != nil {
+        l.syslog.Close()
+        l.syslog = nil
+    }
+
+    if slc != nil {
+        pri := syslog.Priority(slc.facility << 3) | syslog.LOG_NOTICE
+        sl, err := syslog.New(pri, slc.tag)
+        if err != nil {
+            fmt.Fprintf(os.Stderr, "Failed to connect to syslog: %s\n", err)
+        } else {
+            l.syslog = sl
+        }
+    }
+}
+
+func (l *Logger) vlog(level LogLevel, format string, v ...interface{}) {
+    if level <= l.level {
+        l.mtx.Lock()
+        defer l.mtx.Unlock()
+
+        // combine the log level code with the printf args so there's
+        // only one fmt.Sprintf call.
+        fmtargs := append([]interface{}{logLevelStrings[level]}, v...)
+        msg := fmt.Sprintf("[%s] " + format + "\n", fmtargs...)
+        tsmsg := time.Now().Format("2006-01-02 15:04:05") + " " + msg
+
+        if l.stderr {
+            os.Stderr.WriteString(tsmsg)
+        }
+        if l.logfile != nil {
+            l.logfile.WriteString(tsmsg)
+        }
+        if l.syslog != nil {
+            switch level {
+                case LOG_LEVEL_FATAL:
+                    l.syslog.Crit(msg)
+                case LOG_LEVEL_ERROR:
+                    l.syslog.Err(msg)
+                case LOG_LEVEL_WARNING:
+                    l.syslog.Warning(msg)
+                case LOG_LEVEL_INFO:
+                    l.syslog.Info(msg)
+                case LOG_LEVEL_DEBUG:
+                    l.syslog.Debug(msg)
+            }
+        }
+    }
+}
+
+func (l *Logger) Fatal(format string, v ...interface{}) {
     l.vlog(LOG_LEVEL_FATAL, format, v...)
     os.Exit(1)
 }
 
-func (l *WolSshLogger) Error(format string, v ...interface{}) {
+func (l *Logger) Error(format string, v ...interface{}) {
     l.vlog(LOG_LEVEL_ERROR, format, v...)
 }
 
-func (l *WolSshLogger) Warning(format string, v ...interface{}) {
+func (l *Logger) Warning(format string, v ...interface{}) {
     l.vlog(LOG_LEVEL_WARNING, format, v...)
 }
 
-func (l *WolSshLogger) Info(format string, v ...interface{}) {
+func (l *Logger) Info(format string, v ...interface{}) {
     l.vlog(LOG_LEVEL_INFO, format, v...)
 }
 
-func (l *WolSshLogger) Debug(format string, v ...interface{}) {
+func (l *Logger) Debug(format string, v ...interface{}) {
     l.vlog(LOG_LEVEL_DEBUG, format, v...)
 }

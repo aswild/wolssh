@@ -9,7 +9,7 @@ import (
 )
 
 var version string = "v0.0.0"
-var log *WolSshLogger = NewWolSshLogger()
+var log *Logger
 
 var opts struct{
     showVersion bool
@@ -34,15 +34,18 @@ func main() {
         os.Exit(0)
     }
 
-    log.level = LogLevel(opts.logLevel);
+    level := LogLevel(opts.logLevel)
     if opts.debug {
-        log.level = LOG_LEVEL_DEBUG
+        level = LOG_LEVEL_DEBUG
     }
+    //log = NewLogger(level, true, "test.log", &SyslogConfig{facility:18, tag:"wolssh"})
+    log = NewLogger(level, true, "", nil)
 
     if !strings.Contains(opts.listenAddr, ":") {
         opts.listenAddr = ":" + opts.listenAddr
     }
 
+    log.Info("Starting wolssh")
     server := NewServer()
     server.LoadHostKeys(opts.sshDir)
     server.LoadAuthorizedKeys(filepath.Join(opts.sshDir, "authorized_keys"))
