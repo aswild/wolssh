@@ -1,3 +1,10 @@
+/*******************************************************************************
+* server.go: SSH Server internals
+*
+* Copyright 2018 Allen Wild <allenwild93@gmail.com>
+* SPDX-License-Identifier: MIT
+*******************************************************************************/
+
 package main
 
 import (

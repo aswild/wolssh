@@ -1,4 +1,9 @@
-// Basic Wake on LAN client library
+/*******************************************************************************
+* wol.go: Basic Wake on LAN client
+*
+* Copyright 2018 Allen Wild <allenwild93@gmail.com>
+* SPDX-License-Identifier: MIT
+*******************************************************************************/
 
 package main
 

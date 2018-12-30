@@ -1,3 +1,10 @@
+/*******************************************************************************
+* log.go: homemade logging, will probably be split into a module someday
+*
+* Copyright 2018 Allen Wild <allenwild93@gmail.com>
+* SPDX-License-Identifier: MIT
+*******************************************************************************/
+
 package main
 
 import (

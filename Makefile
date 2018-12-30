@@ -1,3 +1,9 @@
+# Makefile for wolssh
+#
+# Copyright 2018 Allen Wild <allenwild93@gmail.com>
+# SPDX-License-Identifier: MIT
+
+# go handles multicore compilation, make shouldn't try to do anything in parallel
 .NOTPARALLEL:
 
 export VERSION ?= $(shell scripts/version.sh)
