@@ -1,0 +1,9 @@
+Package: wolssh
+Source: wolssh
+Version: @VERSION@
+Architecture: @ARCH@
+Section: net
+Priority: optional
+Maintainer: Allen Wild <allenwild93@gmail.com>
+Homepage: https://github.com/aswild/wolssh
+Description: Wake on LAN SSH server

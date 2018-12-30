@@ -1,0 +1,87 @@
+#!/bin/sh
+### BEGIN INIT INFO
+# Provides:       wolssh
+# Required-Start: $network $remote_fs $syslog
+# Required-Stop:  $network $remote_fs $syslog
+# Default-Start:  2 3 4 5
+# Default-Stop:   0 1 6
+# Description:    Wake On LAN SSH Server
+### END INIT INFO
+
+set -e
+
+NAME=wolssh
+DAEMON=/usr/bin/wolssh
+USER=wol
+GROUP=nogroup
+PIDFILE=/var/run/$NAME.pid
+
+# Defaults for options, can be set in /etc/default/$NAME
+PORT='2222'
+SSHDIR='/config/wol/ssh'
+DEBUG=no
+LOGFILE=/var/log/$NAME.log
+SYSLOG_ENABLE=no
+SYSLOG_FACILITY=''
+SYSLOG_TAG=''
+
+if [ -f /etc/default/$NAME ]; then
+    . /etc/default/$NAME
+fi
+
+OPTS="-port $PORT -sshdir $SSHDIR"
+if [ "$DEBUG" = "yes" ]; then
+    OPTS="$OPTS -D"
+fi
+if [ -n "$LOGFILE" ]; then
+    OPTS="$OPTS -logfile $LOGFILE"
+fi
+if [ "$SYSLOG_ENABLE" = "yes" ]; then
+    OPTS="$OPTS -syslog"
+    if [ -n "$SYSLOG_FACILITY" ]; then
+        OPTS="$OPTS -facility $SYSLOG_FACILITY"
+    fi
+    if [ -n "$SYSLOG_TAG" ]; then
+        OPTS="$OPTS -tag $SYSLOG_TAG"
+    fi
+fi
+
+do_start() {
+    echo -n "Starting: $NAME... "
+    if [ -n "$LOGFILE" ]; then
+        touch $LOGFILE
+        chown $USER:$GROUP $LOGFILE
+    fi
+    chown -R $USER:$GROUP $SSHDIR
+
+    start-stop-daemon --quiet --start --background \
+                      --pidfile $PIDFILE --make-pidfile \
+                      --chuid $USER:$GROUP \
+                      --exec $DAEMON -- $OPTS
+    echo "done"
+}
+
+do_stop() {
+    echo -n "Stopping: $NAME... "
+    start-stop-daemon --quiet --stop --oknodo --pidfile $PIDFILE
+    rm -f $PIDFILE
+    echo "done"
+}
+
+case "$1" in
+    start)
+        do_start
+        ;;
+    stop)
+        do_stop
+        ;;
+    restart)
+        do_stop
+        do_start
+        ;;
+    *)
+        echo "Usage: $0 {start|stop|restart}"
+        exit 1
+esac
+
+exit 0

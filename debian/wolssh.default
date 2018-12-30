@@ -1,0 +1,11 @@
+# wolssh config settings
+# vim: ft=sh
+
+#PORT='2222'
+#SSHDIR='/config/wol/ssh'
+
+#DEBUG=no
+#LOGFILE=/var/log/$NAME.log
+#SYSLOG_ENABLE=no
+#SYSLOG_FACILITY=''
+#SYSLOG_TAG=''
