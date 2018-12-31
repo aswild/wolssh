@@ -10,6 +10,9 @@ export VERSION ?= $(shell scripts/version.sh)
 export GO111MODULE = on
 export GOARCH ?=
 
+BIN2GO := scripts/bin2go
+BIN2GO_PKG := github.com/aswild/bin2go/cmd
+
 GO ?= go
 
 GOFLAGS ?= -v
@@ -22,6 +25,9 @@ all: build
 
 build:
 	$(GO) build -mod=vendor $(GOFLAGS) -ldflags='-X main.version=$(VERSION) $(LDFLAGS)' -o $(BINNAME)
+
+$(BIN2GO):
+	$(GO) build -mod=vendor $(GOFLAGS) -ldflags='$(LDFLAGS)' -o $@ $(BIN2GO_PKG)
 
 clean:
 	rm -f $(BINNAME) *.deb
