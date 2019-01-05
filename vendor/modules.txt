@@ -9,3 +9,5 @@ golang.org/x/crypto/internal/chacha20
 golang.org/x/crypto/poly1305
 golang.org/x/crypto/ed25519/internal/edwards25519
 golang.org/x/crypto/internal/subtle
+# gopkg.in/ini.v1 v1.41.0
+gopkg.in/ini.v1
