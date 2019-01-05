@@ -20,15 +20,14 @@ import (
 )
 
 type Server struct {
-    Username    string
     config      ssh.ServerConfig
-    pubKeysMap  map[string]string
+    userKeys    map[string]map[string]string
 }
 
 func NewServer() (*Server) {
     s := Server{
         config:     ssh.ServerConfig{},
-        pubKeysMap: map[string]string{},
+        userKeys:   map[string]map[string]string{},
     }
     s.config.PublicKeyCallback = s.authPublicKey
 
@@ -36,18 +35,19 @@ func NewServer() (*Server) {
 }
 
 func (s *Server) authPublicKey(conn ssh.ConnMetadata, pubKey ssh.PublicKey) (*ssh.Permissions, error) {
-    if conn.User() != s.Username {
-        return nil, fmt.Errorf("connection from %v: invalid user: %q", conn.RemoteAddr(), conn.User())
+    user := conn.User()
+    if keys, ok := s.userKeys[user]; ok {
+        if comment, ok := keys[string(pubKey.Marshal())]; ok {
+            return &ssh.Permissions{
+                Extensions: map[string]string{
+                    "pubkey-fp": ssh.FingerprintSHA256(pubKey),
+                    "pubkey-comment": comment,
+                },
+            }, nil
+        }
+        return nil, fmt.Errorf("connection from %v: unknown public key for %q", conn.RemoteAddr(), user)
     }
-    if comment, ok := s.pubKeysMap[string(pubKey.Marshal())]; ok {
-        return &ssh.Permissions{
-            Extensions: map[string]string{
-                "pubkey-fp": ssh.FingerprintSHA256(pubKey),
-                "pubkey-comment": comment,
-            },
-        }, nil
-    }
-    return nil, fmt.Errorf("connection from %v: unknown public key for %q", conn.RemoteAddr(), conn.User())
+    return nil, fmt.Errorf("connection from %v: unknown user %q", conn.RemoteAddr(), user)
 }
 
 func (s *Server) LoadHostKeys(keyDir string) {
@@ -81,27 +81,38 @@ func (s *Server) LoadHostKeys(keyDir string) {
     log.Info("Loaded SSH host keys: %s", strings.Join(foundKeys, ", "))
 }
 
-func (s *Server) LoadAuthorizedKeys(keyFile string) {
-    data, err := ioutil.ReadFile(keyFile)
-    if err != nil {
-        log.Fatal("Failed to read authorized_keys file '%s'", keyFile)
+func (s *Server) AddUser(name string, keys []string) {
+    log.Debug("Adding user %q with %d keys", name, len(keys))
+    keyMap := make(map[string]string)
+
+    for _, key := range keys {
+        data := []byte(key)
+        for len(data) > 0 {
+            pubKey, comment, _, rest, err := ssh.ParseAuthorizedKey(data)
+            if err != nil {
+                log.Fatal("failed to parse key for user %q: %v", name, err)
+            }
+            log.Debug("Loaded authorized public key for user %q: %q", name, comment)
+            keyMap[string(pubKey.Marshal())] = comment
+            data = rest
+        }
     }
 
-    count := 0
-    for len(data) > 0 {
-        pubKey, comment, _, rest, err := ssh.ParseAuthorizedKey(data)
-        if err != nil {
-            log.Fatal("Failed to parse authorized_keys file '%s': %s", keyFile, err)
-        }
-        log.Debug("Loaded authorized public key %s", comment)
-        s.pubKeysMap[string(pubKey.Marshal())] = comment
-        data = rest
-        count++
-    }
-    if count == 0 {
-        log.Warning("Didn't load any authorized public keys!")
+    if len(keyMap) == 0 {
+        log.Warning("No authorized keys for user %q", name)
     } else {
-        log.Info("Loaded %d authorized keys", count)
+        log.Info("Loaded %d authorized keys for user %q", len(keyMap), name)
+    }
+
+    if s.userKeys[name] != nil {
+        log.Warning("Duplicate user %q, overwriting keys", name)
+    }
+    s.userKeys[name] = keyMap
+}
+
+func (s *Server) AddUsers(users []UserConfig) {
+    for _, u := range users {
+        s.AddUser(u.Name, u.Keys)
     }
 }
 
@@ -111,7 +122,7 @@ func (s *Server) Listen(listenAddr string) {
         log.Fatal("Failed to listen on socket: %s", err)
     }
 
-    log.Info("listening on %s for user %q", listenAddr, s.Username)
+    log.Info("listening on %s", listenAddr)
     for {
         conn, err := socket.Accept()
         if err != nil {
