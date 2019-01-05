@@ -1,6 +1,8 @@
 # github.com/aswild/bin2go v1.0.0
 github.com/aswild/bin2go/cmd
 github.com/aswild/bin2go
+# github.com/sabhiram/go-wol v0.0.0-20181027164823-5d8c3d0e40c5
+github.com/sabhiram/go-wol
 # golang.org/x/crypto v0.0.0-20181203042331-505ab145d0a9
 golang.org/x/crypto/ssh
 golang.org/x/crypto/curve25519

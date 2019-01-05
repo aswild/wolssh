@@ -10,6 +10,8 @@ package main
 import (
     "fmt"
     "net"
+
+    sawol "github.com/sabhiram/go-wol"
 )
 
 var aliasMap = map[string]string{
@@ -25,7 +27,7 @@ func ResolveAlias(a string) (string, error) {
 }
 
 func SendWol(mac string) (error) {
-    packet, err := NewMagicPacket(mac)
+    packet, err := sawol.New(mac)
     if err != nil {
         return fmt.Errorf("Failed to create magic packet: %s", err)
     }
