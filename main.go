@@ -12,45 +12,27 @@ import (
     "fmt"
     "os"
     "os/signal"
-    "os/user"
-    "path/filepath"
     "strings"
     "syscall"
 )
 
 var version string = "v0.0.0"
 var log *Logger
+var conf *Config
 
-var opts struct{
+var opts struct {
     showVersion bool
     debug       bool
-    logLevel    int
-    logFile     string
-    logStderr   bool
-    syslog      bool
-    syslogFac   int
-    syslogTag   string
-    listenAddr  string
-    sshDir      string
-    user        string
+    confFile    string
 }
 
 func main() {
     // main options
     flag.BoolVar(&opts.showVersion, "V", false, "Show version and exit")
-    flag.StringVar(&opts.listenAddr, "port", "2222", "Listen address/port, format [host:]port")
-    flag.StringVar(&opts.sshDir, "sshdir", "ssh", "Directory containing SSH host keys and authorized_keys")
-    flag.StringVar(&opts.user, "user", "", "SSH user to accept connections for (default current user)")
+    flag.StringVar(&opts.confFile, "c", "", "Configuration file")
 
     // log options
     flag.BoolVar(&opts.debug, "D", false, "Enable debug logging (same as -loglevel=4)")
-    flag.IntVar(&opts.logLevel, "loglevel", int(LOG_LEVEL_INFO),
-                "Log level number: 0=fatal, 1=error, 2=warn, 3=info (default), 4=debug")
-    flag.StringVar(&opts.logFile, "logfile", "", "Log file name (default none)")
-    flag.BoolVar(&opts.logStderr, "E", false, "Log to stderr (default on unless -syslog or -logfile are given)")
-    flag.BoolVar(&opts.syslog, "syslog", false, "Log to syslog (default off)")
-    flag.IntVar(&opts.syslogFac, "facility", 18, "syslog facility code (default 18/local2)")
-    flag.StringVar(&opts.syslogTag, "tag", "wolssh", "syslog message tag")
 
     flag.Parse()
 
@@ -59,56 +41,48 @@ func main() {
         os.Exit(0)
     }
 
+    // load the config file
+    conf = DefaultConfig()
+    if opts.confFile != "" {
+        var err error
+        conf, err = LoadConfig(opts.confFile)
+        if err != nil {
+            fmt.Printf("Error parsing config file: %v\n", err)
+            os.Exit(1)
+        }
+    }
+
     // logging setup
-    level := LogLevel(opts.logLevel)
     if opts.debug {
-        level = LOG_LEVEL_DEBUG
+        conf.Log.Level = int(LOG_LEVEL_DEBUG)
     }
 
     var syslogConfig *SyslogConfig = nil
-    if opts.syslog {
-        syslogConfig = &SyslogConfig{facility:opts.syslogFac, tag:opts.syslogTag}
-    } else if opts.logFile == "" {
+    if conf.Log.Syslog {
+        syslogConfig = &SyslogConfig{facility:conf.Log.Facility, tag:conf.Log.Tag}
+    } else if conf.Log.File == "" {
         // force enable stderr logging if no file or syslog given
-        opts.logStderr = true
+        conf.Log.Stderr = true
     }
 
-    log = NewLogger(level, opts.logStderr, opts.logFile, syslogConfig)
+    log = NewLogger(LogLevel(conf.Log.Level), conf.Log.Stderr, conf.Log.File, syslogConfig)
 
     // signal handling
     sighupChan := make(chan os.Signal, 1)
     signal.Notify(sighupChan, syscall.SIGHUP)
     go func() {
         <-sighupChan
-        log.SetLogFile(opts.logFile)
+        log.SetLogFile(conf.Log.File)
         log.Info("Caught SIGHUP, log file reopened")
     }()
 
-    if !strings.Contains(opts.listenAddr, ":") {
-        opts.listenAddr = ":" + opts.listenAddr
-    }
-
-    if opts.user == "" {
-        currentUser, err := user.Current()
-        if err == nil {
-            opts.user = currentUser.Username
-        } else {
-            log.Warning("Unable to get current user info: %v", err)
-            envUser := os.Getenv("USER")
-            if envUser != "" {
-                log.Warning("Using USER %q from the environment", envUser)
-                opts.user = envUser
-            } else {
-                log.Warning("Using default user \"wol\"")
-                opts.user = "wol"
-            }
-        }
+    if !strings.Contains(conf.Listen, ":") {
+        conf.Listen = ":" + conf.Listen
     }
 
     log.Info("Starting wolssh version %s", version)
     server := NewServer()
-    server.Username = opts.user
-    server.LoadHostKeys(opts.sshDir)
-    server.LoadAuthorizedKeys(filepath.Join(opts.sshDir, "authorized_keys"))
-    server.Listen(opts.listenAddr)
+    server.LoadHostKeys(conf.SshDir)
+    server.AddUsers(conf.Users)
+    server.Listen(conf.Listen)
 }
