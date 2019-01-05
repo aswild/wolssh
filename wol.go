@@ -63,11 +63,11 @@ func validIPv4Bcast(addr string) bool {
            !ip.IsUnspecified()
 }
 
-func ResolveAlias(a string) (string, error) {
-    if mac, ok := aliasMap[a]; ok {
+func ResolveHost(a string) (string, error) {
+    if mac, ok := conf.Hosts[a]; ok {
         return mac, nil
     } else {
-        return "", fmt.Errorf("Couldn't find alias '%s'", a)
+        return "", fmt.Errorf("Couldn't find host '%s'", a)
     }
 }
 
@@ -105,7 +105,7 @@ func SendWol(bcast *BroadcastAddr, mac string) (error) {
 }
 
 func HandleWolCmd(cmd string) (string, byte) {
-    mac, err := ResolveAlias(cmd)
+    mac, err := ResolveHost(cmd)
     if err != nil {
         return err.Error(), 1
     }

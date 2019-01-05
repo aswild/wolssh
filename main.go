@@ -51,6 +51,7 @@ func main() {
             os.Exit(1)
         }
     }
+    fmt.Printf("%+v", conf)
 
     // logging setup
     if opts.debug {

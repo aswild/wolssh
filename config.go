@@ -31,17 +31,17 @@ type UserConfig struct {
 type Config struct {
     Listen      string
     SshDir      string
-    BcastStrs   []string        `ini:"broadcast,omitempty,allowshadow"`
-    bcastAddrs  []BroadcastAddr `ini:"-"`
     Log         LogConfig
-    Users       []UserConfig    `ini:"-"`
+    BcastStrs   []string            `ini:"broadcast,omitempty,allowshadow"`
+    bcastAddrs  []BroadcastAddr     `ini:"-"`
+    Hosts       map[string]string   `ini:"-"`
+    Users       []UserConfig        `ini:"-"`
 }
 
 func DefaultConfig() (*Config) {
     return &Config{
         Listen:     ":2222",
         SshDir:     "ssh",
-        BcastStrs:  []string{"255.255.255.255"},
         Log: LogConfig{
             Level:      int(LOG_LEVEL_INFO),
             File:       "",
@@ -50,6 +50,7 @@ func DefaultConfig() (*Config) {
             Facility:   18,
             Tag:        "wolssh",
         },
+        BcastStrs:  []string{"255.255.255.255"},
     }
 }
 
@@ -59,14 +60,17 @@ func LoadConfig(filename string) (*Config, error) {
     iconf, _ := ini.LoadSources(ini.LoadOptions{AllowShadows:true}, []byte(""))
     iconf.NameMapper = ini.TitleUnderscore
 
+    // read the file
     if err := iconf.Append(filename); err != nil {
         return nil, err
     }
 
+    // map everything that go-ini can
     if err := iconf.Section("wolssh").StrictMapTo(conf); err != nil {
         return nil, err
     }
 
+    // set up users
     for _, s := range iconf.Section("user").ChildSections() {
         u := UserConfig{Name: strings.TrimPrefix(s.Name(), "user.")}
         if err := s.StrictMapTo(&u); err != nil {
@@ -74,6 +78,9 @@ func LoadConfig(filename string) (*Config, error) {
         }
         conf.Users = append(conf.Users, u)
     }
+
+    // set up hosts mapping
+    conf.Hosts = iconf.Section("hosts").KeysHash()
 
     return conf, nil
 }
