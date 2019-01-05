@@ -32,7 +32,7 @@ func main() {
     flag.StringVar(&opts.confFile, "c", "", "Configuration file")
 
     // log options
-    flag.BoolVar(&opts.debug, "D", false, "Enable debug logging (same as -loglevel=4)")
+    flag.BoolVar(&opts.debug, "D", false, "Enable debug logging")
 
     flag.Parse()
 
@@ -66,6 +66,17 @@ func main() {
     }
 
     log = NewLogger(LogLevel(conf.Log.Level), conf.Log.Stderr, conf.Log.File, syslogConfig)
+
+    // parse and verify WOL broadcast addresses
+    conf.bcastAddrs = make([]BroadcastAddr, len(conf.BcastStrs))
+    for i, bs := range conf.BcastStrs {
+        b := MakeBroadcastAddr(bs)
+        if b != nil {
+            conf.bcastAddrs[i] = *b
+        } else {
+            log.Fatal("Invalid Broadcast address: %v", bs)
+        }
+    }
 
     // signal handling
     sighupChan := make(chan os.Signal, 1)

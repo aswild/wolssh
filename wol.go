@@ -10,12 +10,57 @@ package main
 import (
     "fmt"
     "net"
+    "strconv"
+    "strings"
 
     sawol "github.com/sabhiram/go-wol"
 )
 
+type BroadcastAddr struct {
+    addr string
+    port int
+}
+
+const defaultPort int = 40000
+
 var aliasMap = map[string]string{
     "redacted": "00:00:00:00:00:00",
+}
+
+func MakeBroadcastAddr(s string) (*BroadcastAddr) {
+    sp := strings.Split(s, ":")
+    addr := sp[0]
+    if !validIPv4Bcast(addr) {
+        return nil
+    }
+
+    port := defaultPort
+    switch len(sp) {
+        case 1:
+            // no-op, handled above
+        case 2:
+            var err error
+            port, err = strconv.Atoi(sp[1])
+            if err != nil {
+                return nil
+            }
+        default:
+            return nil
+    }
+    return &BroadcastAddr{addr, port}
+}
+
+func (b *BroadcastAddr) Marshal() string {
+    return fmt.Sprintf("%s:%d", b.addr, b.port)
+}
+
+func validIPv4Bcast(addr string) bool {
+    ip := net.ParseIP(addr)
+    return ip != nil &&
+           ip.To4() != nil &&
+           !ip.IsLoopback() &&
+           !ip.IsMulticast() &&
+           !ip.IsUnspecified()
 }
 
 func ResolveAlias(a string) (string, error) {
@@ -26,7 +71,7 @@ func ResolveAlias(a string) (string, error) {
     }
 }
 
-func SendWol(mac string) (error) {
+func SendWol(bcast *BroadcastAddr, mac string) (error) {
     packet, err := sawol.New(mac)
     if err != nil {
         return fmt.Errorf("Failed to create magic packet: %s", err)
@@ -37,8 +82,7 @@ func SendWol(mac string) (error) {
         return fmt.Errorf("Failed to marshal magic packet: %s", err)
     }
 
-    //baddr, err := net.ResolveUDPAddr("udp4", "255.255.255.255:40000")
-    baddr, err := net.ResolveUDPAddr("udp4", "192.168.0.255:40000")
+    baddr, err := net.ResolveUDPAddr("udp4", bcast.Marshal())
     if err != nil {
         return fmt.Errorf("Failed to resolve UDP broadcast address: %s", err)
     }
@@ -56,7 +100,7 @@ func SendWol(mac string) (error) {
         return fmt.Errorf("expected to send 102 bytes but sent only %d", n)
     }
 
-    log.Info("Sent magic packet to %s", mac)
+    log.Info("Sent magic packet for %s to %s", mac, bcast.Marshal())
     return nil
 }
 
@@ -66,8 +110,10 @@ func HandleWolCmd(cmd string) (string, byte) {
         return err.Error(), 1
     }
 
-    if err = SendWol(mac); err != nil {
-        return err.Error(), 2
+    for _, b := range conf.bcastAddrs {
+        if err = SendWol(&b, mac); err != nil {
+            return err.Error(), 2
+        }
     }
 
     return fmt.Sprintf("Woke up host %s (%s)", cmd, mac), 0
