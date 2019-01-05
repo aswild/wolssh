@@ -1,11 +1,9 @@
-# wolssh config settings
+# wolssh daemon startup settings
 # vim: ft=sh
 
-#PORT='2222'
-#SSHDIR='/config/wol/ssh'
+# Config file location
+CONF_FILE=/etc/$NAME.ini
 
-#DEBUG=no
-#LOGFILE=/var/log/$NAME.log
-#SYSLOG_ENABLE=no
-#SYSLOG_FACILITY=''
-#SYSLOG_TAG=''
+# Log file location - used only by the init script to set ownership
+# before dropping privileges. Should match what's in wolssh.ini
+LOGFILE=/var/log/$NAME.log

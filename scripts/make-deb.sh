@@ -23,6 +23,7 @@ echo "preparing data"
 datadir=$tmpdir/data
 install -Dm755 $wolssh $datadir/usr/bin/wolssh
 install -Dm755 debian/wolssh.init $datadir/etc/init.d/wolssh
+install -Dm644 default.ini $datadir/etc/wolssh.ini
 install -Dm644 debian/wolssh.default $datadir/etc/default/wolssh
 tar --owner=root:0 --group=root:0 -czf $tmpdir/data.tar.gz -C $datadir .
 

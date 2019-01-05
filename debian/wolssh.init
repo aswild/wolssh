@@ -16,35 +16,11 @@ USER=wol
 GROUP=nogroup
 PIDFILE=/var/run/$NAME.pid
 
-# Defaults for options, can be set in /etc/default/$NAME
-PORT='2222'
-SSHDIR='/config/wol/ssh'
-DEBUG=no
-LOGFILE=/var/log/$NAME.log
-SYSLOG_ENABLE=no
-SYSLOG_FACILITY=''
-SYSLOG_TAG=''
-
 if [ -f /etc/default/$NAME ]; then
     . /etc/default/$NAME
 fi
 
-OPTS="-user $USER -port $PORT -sshdir $SSHDIR"
-if [ "$DEBUG" = "yes" ]; then
-    OPTS="$OPTS -D"
-fi
-if [ -n "$LOGFILE" ]; then
-    OPTS="$OPTS -logfile $LOGFILE"
-fi
-if [ "$SYSLOG_ENABLE" = "yes" ]; then
-    OPTS="$OPTS -syslog"
-    if [ -n "$SYSLOG_FACILITY" ]; then
-        OPTS="$OPTS -facility $SYSLOG_FACILITY"
-    fi
-    if [ -n "$SYSLOG_TAG" ]; then
-        OPTS="$OPTS -tag $SYSLOG_TAG"
-    fi
-fi
+OPTS="-c $CONF_FILE"
 
 do_start() {
     echo -n "Starting: $NAME... "
@@ -52,9 +28,8 @@ do_start() {
         touch $LOGFILE
         chown $USER:$GROUP $LOGFILE
     fi
-    chown -R $USER:$GROUP $SSHDIR
 
-    start-stop-daemon --quiet --start --background \
+    start-stop-daemon --start --background \
                       --pidfile $PIDFILE --make-pidfile \
                       --chuid $USER:$GROUP \
                       --exec $DAEMON -- $OPTS
@@ -63,7 +38,7 @@ do_start() {
 
 do_stop() {
     echo -n "Stopping: $NAME... "
-    start-stop-daemon --quiet --stop --oknodo --pidfile $PIDFILE
+    start-stop-daemon --stop --oknodo --pidfile $PIDFILE
     rm -f $PIDFILE
     echo "done"
 }
