@@ -30,7 +30,7 @@ type UserConfig struct {
 
 type Config struct {
     Listen      string
-    SshDir      string
+    HostKeys    []string            `ini:",,allowshadow"`
     Log         LogConfig
     BcastStrs   []string            `ini:"broadcast,omitempty,allowshadow"`
     bcastAddrs  []BroadcastAddr     `ini:"-"`
@@ -41,7 +41,7 @@ type Config struct {
 func DefaultConfig() (*Config) {
     return &Config{
         Listen:     ":2222",
-        SshDir:     "ssh",
+        HostKeys:   []string{"ssh/ssh_host_*_key"},
         Log: LogConfig{
             Level:      int(LOG_LEVEL_INFO),
             File:       "",

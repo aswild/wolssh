@@ -12,9 +12,8 @@ import (
     "io"
     "io/ioutil"
     "net"
-    "os"
     "path/filepath"
-    "strings"
+    "reflect"
 
     "golang.org/x/crypto/ssh"
 )
@@ -50,35 +49,37 @@ func (s *Server) authPublicKey(conn ssh.ConnMetadata, pubKey ssh.PublicKey) (*ss
     return nil, fmt.Errorf("connection from %v: unknown user %q", conn.RemoteAddr(), user)
 }
 
-func (s *Server) LoadHostKeys(keyDir string) {
-    keyTypes := [...]string{"rsa", "dsa", "ecdsa", "ed25519"}
-
-    foundKeys := make([]string, 0)
-    for _, t := range keyTypes {
-        keyName := "ssh_host_" + t + "_key"
-        keyPath := filepath.Join(keyDir, keyName)
-        keyData, err := ioutil.ReadFile(keyPath)
-        if err != nil {
-            if !os.IsNotExist(err) {
+func (s *Server) LoadHostKeys(paths []string) {
+    // key types we've found (map to avoid duplicates)
+    foundKeys := map[string]bool{}
+    for _, p := range paths {
+        globs, _ := filepath.Glob(p)
+        for _, keyPath := range globs {
+            keyData, err := ioutil.ReadFile(keyPath)
+            if err != nil {
                 log.Error("Failed to read host key: %s", err)
+                continue
             }
-            continue
-        }
 
-        key, err := ssh.ParsePrivateKey(keyData)
-        if err != nil {
-            log.Error("Failed to parse private key '%s': %s", keyPath, err)
-        }
+            key, err := ssh.ParsePrivateKey(keyData)
+            if err != nil {
+                log.Error("Failed to parse private key '%s': %s", keyPath, err)
+            }
 
-        s.config.AddHostKey(key)
-        foundKeys = append(foundKeys, t)
-        log.Debug("Loaded host key %s", keyPath)
+            s.config.AddHostKey(key)
+            foundKeys[key.PublicKey().Type()] = true
+            log.Debug("Loaded host key %s", keyPath)
+        }
     }
 
     if len(foundKeys) == 0 {
-        log.Fatal("Couldn't find any host keys in directory '%s'", keyDir)
+        log.Fatal("Couldn't find any host keys!")
     }
-    log.Info("Loaded SSH host keys: %s", strings.Join(foundKeys, ", "))
+
+    // reflect is the only non-loopy way to get a list of keys from a map,
+    // and even then it returns []reflect.Value rather than a string slice
+    // (and there's no comprehension to compactly convert []Value to []string)
+    log.Info("Loaded SSH host keys: %v", reflect.ValueOf(foundKeys).MapKeys())
 }
 
 func (s *Server) AddUser(name string, keys []string) {

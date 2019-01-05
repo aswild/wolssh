@@ -94,7 +94,7 @@ func main() {
 
     log.Info("Starting wolssh version %s", version)
     server := NewServer()
-    server.LoadHostKeys(conf.SshDir)
+    server.LoadHostKeys(conf.HostKeys)
     server.AddUsers(conf.Users)
     server.Listen(conf.Listen)
 }

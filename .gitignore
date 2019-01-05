@@ -1,4 +1,4 @@
 *.deb
-/wolssh*
-/ssh
+/wolssh
+/wolssh-*
 /scripts/bin2go
