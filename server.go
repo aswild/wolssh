@@ -130,6 +130,7 @@ func (s *Server) Listen(listenAddr string) {
             log.Debug("Error accepting connection: %v", err)
             continue
         }
+        log.Info("Connection from %v", conn.RemoteAddr())
 
         go func() {
             sshConn, chans, reqs, err := ssh.NewServerConn(conn, &s.config)
@@ -137,11 +138,7 @@ func (s *Server) Listen(listenAddr string) {
                 log.Error("SSH Handshake error: %v", err)
                 return
             }
-            //log.Debug("Connection from %q for user %q with key %q (%s)",
-            //          sshConn.RemoteAddr(), sshConn.User(), sshConn.Permissions.Extensions["pubkey-fp"],
-            //          sshConn.Permissions.Extensions["pubkey-comment"])
-            log.Debug("Connection from %q for user %q with key (%s)",
-                      sshConn.RemoteAddr(), sshConn.User(), sshConn.Permissions.Extensions["pubkey-comment"])
+            log.Info("Authenticated as user %s with key (%s)", sshConn.User(), sshConn.Permissions.Extensions["pubkey-comment"])
 
             go ssh.DiscardRequests(reqs)
             for newChannel := range chans {

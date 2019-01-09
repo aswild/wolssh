@@ -16,6 +16,7 @@ import (
 
 type LogConfig struct {
     Level       int
+    Timestamp   bool
     File        string
     Stderr      bool
     Syslog      bool
@@ -44,6 +45,7 @@ func DefaultConfig() (*Config) {
         HostKeys:   []string{"ssh/ssh_host_*_key"},
         Log: LogConfig{
             Level:      int(LOG_LEVEL_INFO),
+            Timestamp:  true,
             File:       "",
             Stderr:     false,
             Syslog:     false,

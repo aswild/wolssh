@@ -17,8 +17,10 @@ import (
 )
 
 var version string = "v0.0.0"
-var log *Logger
 var conf *Config
+var log Logger {
+    Level:  3
+}
 
 var opts struct {
     showVersion bool
@@ -51,7 +53,6 @@ func main() {
             os.Exit(1)
         }
     }
-    fmt.Printf("%+v", conf)
 
     // logging setup
     if opts.debug {
@@ -66,7 +67,13 @@ func main() {
         conf.Log.Stderr = true
     }
 
-    log = NewLogger(LogLevel(conf.Log.Level), conf.Log.Stderr, conf.Log.File, syslogConfig)
+    log = &Logger{
+        Level:      LogLevel(conf.Log.Level),
+        Timestamp:  conf.Log.Timestamp,
+        Stderr:     conf.Log.Stderr,
+    }
+    log.SetLogFile(conf.Log.File)
+    log.SetSyslog(syslogConfig)
 
     // parse and verify WOL broadcast addresses
     conf.bcastAddrs = make([]BroadcastAddr, len(conf.BcastStrs))

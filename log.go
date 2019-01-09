@@ -29,23 +29,17 @@ const (
 var logLevelStrings = [...]string{"FATAL", "E", "W", "I", "D"}
 
 type Logger struct {
-    level   LogLevel
-    stderr  bool
-    logfile *os.File
-    syslog  *syslog.Writer
-    mtx     sync.Mutex
+    Level       LogLevel
+    Timestamp   bool
+    Stderr      bool
+    logfile     *os.File
+    syslog      *syslog.Writer
+    mtx         sync.Mutex
 }
 
 type SyslogConfig struct {
     facility int
     tag      string
-}
-
-func NewLogger(level LogLevel, stderr bool, logfile string, slc *SyslogConfig) (*Logger) {
-    l := Logger{level: level, stderr: stderr}
-    l.setLogFile(logfile)
-    l.setSyslog(slc)
-    return &l
 }
 
 func (l *Logger) Close() {
@@ -107,7 +101,7 @@ func (l *Logger) setSyslog(slc *SyslogConfig) {
 }
 
 func (l *Logger) vlog(level LogLevel, format string, v ...interface{}) {
-    if level <= l.level {
+    if level <= l.Level {
         l.mtx.Lock()
         defer l.mtx.Unlock()
 
@@ -115,9 +109,14 @@ func (l *Logger) vlog(level LogLevel, format string, v ...interface{}) {
         // only one fmt.Sprintf call.
         fmtargs := append([]interface{}{logLevelStrings[level]}, v...)
         msg := fmt.Sprintf("[%s] " + format + "\n", fmtargs...)
-        tsmsg := time.Now().Format("2006-01-02 15:04:05") + " " + msg
+        var tsmsg string
+        if l.Timestamp {
+            tsmsg = time.Now().Format("2006-01-02 15:04:05") + " " + msg
+        } else {
+            tsmsg = msg
+        }
 
-        if l.stderr {
+        if l.Stderr {
             os.Stderr.WriteString(tsmsg)
         }
         if l.logfile != nil {
