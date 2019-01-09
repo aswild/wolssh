@@ -2,8 +2,8 @@
 # vim: ft=sh
 
 # Config file location
-CONF_FILE=/etc/$NAME.ini
+CONF_FILE=/etc/wolssh.ini
 
 # Log file location - used only by the init script to set ownership
 # before dropping privileges. Should match what's in wolssh.ini
-LOGFILE=/var/log/$NAME.log
+LOGFILE=/var/log/wolssh.log

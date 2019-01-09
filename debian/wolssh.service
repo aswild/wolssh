@@ -1,0 +1,19 @@
+[Unit]
+Description=Wake On LAN SSH Server
+Wants=network.target vyatta-router.service
+After=network.target vyatta-router.service
+
+[Service]
+Type=simple
+User=wol
+Group=nogroup
+NoNewPrivileges=yes
+Environment=CONF_FILE=/etc/wolssh.ini
+EnvironmentFile=-/etc/default/wolssh
+ExecStart=/usr/bin/wolssh -c $CONF_FILE
+StandardOutput=syslog
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
