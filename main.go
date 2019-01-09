@@ -18,8 +18,10 @@ import (
 
 var version string = "v0.0.0"
 var conf *Config
-var log Logger {
-    Level:  3
+var log Logger = Logger{
+    Level:      3,
+    Timestamp:  true,
+    Stderr:     true,
 }
 
 var opts struct {
@@ -55,25 +57,30 @@ func main() {
     }
 
     // logging setup
+    log.Timestamp = conf.Log.Timestamp
     if opts.debug {
         conf.Log.Level = int(LOG_LEVEL_DEBUG)
+    } else {
+        log.Level = LogLevel(conf.Log.Level)
     }
 
-    var syslogConfig *SyslogConfig = nil
     if conf.Log.Syslog {
-        syslogConfig = &SyslogConfig{facility:conf.Log.Facility, tag:conf.Log.Tag}
-    } else if conf.Log.File == "" {
-        // force enable stderr logging if no file or syslog given
-        conf.Log.Stderr = true
-    }
+        log.SetSyslog(conf.Log.Facility, conf.Log.Tag)
+    } else if conf.Log.File != "" {
+        log.SetLogFile(conf.Log.File)
 
-    log = &Logger{
-        Level:      LogLevel(conf.Log.Level),
-        Timestamp:  conf.Log.Timestamp,
-        Stderr:     conf.Log.Stderr,
+        // SIGHUP handler to reopen the log file (e.g. after rotation)
+        sighupChan := make(chan os.Signal, 1)
+        signal.Notify(sighupChan, syscall.SIGHUP)
+        go func() {
+            <-sighupChan
+            log.SetLogFile(conf.Log.File)
+            log.Info("Caught SIGHUP, log file reopened")
+        }()
+    } else {
+        // force enable stderr logging if no file or syslog given
+        log.Stderr = true
     }
-    log.SetLogFile(conf.Log.File)
-    log.SetSyslog(syslogConfig)
 
     // parse and verify WOL broadcast addresses
     conf.bcastAddrs = make([]BroadcastAddr, len(conf.BcastStrs))
@@ -85,15 +92,6 @@ func main() {
             log.Fatal("Invalid Broadcast address: %v", bs)
         }
     }
-
-    // signal handling
-    sighupChan := make(chan os.Signal, 1)
-    signal.Notify(sighupChan, syscall.SIGHUP)
-    go func() {
-        <-sighupChan
-        log.SetLogFile(conf.Log.File)
-        log.Info("Caught SIGHUP, log file reopened")
-    }()
 
     if !strings.Contains(conf.Listen, ":") {
         conf.Listen = ":" + conf.Listen

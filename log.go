@@ -37,11 +37,6 @@ type Logger struct {
     mtx         sync.Mutex
 }
 
-type SyslogConfig struct {
-    facility int
-    tag      string
-}
-
 func (l *Logger) Close() {
     l.mtx.Lock()
     defer l.mtx.Unlock()
@@ -77,21 +72,22 @@ func (l *Logger) setLogFile(logfile string) {
     }
 }
 
-// set the syslog facility
-func (l *Logger) SetSyslog(slc *SyslogConfig) {
+// set the syslog facility with the given facility code and tag.
+// If facility == -1, then disable syslog
+func (l *Logger) SetSyslog(facility int, tag string) {
     l.mtx.Lock()
     defer l.mtx.Unlock()
-    l.setSyslog(slc)
+    l.setSyslog(facility, tag)
 }
-func (l *Logger) setSyslog(slc *SyslogConfig) {
+func (l *Logger) setSyslog(facility int, tag string) {
     if l.syslog != nil {
         l.syslog.Close()
         l.syslog = nil
     }
 
-    if slc != nil {
-        pri := syslog.Priority(slc.facility << 3) | syslog.LOG_NOTICE
-        sl, err := syslog.New(pri, slc.tag)
+    if facility != -1 {
+        pri := syslog.Priority(facility << 3) | syslog.LOG_NOTICE
+        sl, err := syslog.New(pri, tag)
         if err != nil {
             fmt.Fprintf(os.Stderr, "Failed to connect to syslog: %s\n", err)
         } else {
