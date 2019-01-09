@@ -39,7 +39,11 @@ mod:
 	$(GO) mod tidy -v
 	$(GO) mod vendor -v
 
+modupdate:
+	$(GO) get -u
+	@$(MAKE) --no-print-directory mod
+
 deb: build
 	scripts/make-deb.sh
 
-.PHONY: all build clean goclean mod deb
+.PHONY: all build clean goclean mod modupdate deb
