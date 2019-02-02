@@ -60,9 +60,8 @@ func main() {
     log.Timestamp = conf.Log.Timestamp
     if opts.debug {
         conf.Log.Level = int(LOG_LEVEL_DEBUG)
-    } else {
-        log.Level = LogLevel(conf.Log.Level)
     }
+    log.Level = LogLevel(conf.Log.Level)
 
     if conf.Log.Syslog {
         log.SetSyslog(conf.Log.Facility, conf.Log.Tag)
