@@ -12,6 +12,7 @@ import (
     "fmt"
     "os"
     "os/signal"
+    "runtime"
     "strings"
     "syscall"
 )
@@ -30,6 +31,10 @@ var opts struct {
     confFile    string
 }
 
+func versionString() string {
+    return fmt.Sprintf("%s (%s)", version, runtime.Version())
+}
+
 func main() {
     // main options
     flag.BoolVar(&opts.showVersion, "V", false, "Show version and exit")
@@ -41,7 +46,7 @@ func main() {
     flag.Parse()
 
     if opts.showVersion {
-        fmt.Println("wolssh version", version)
+        fmt.Println("wolssh version", versionString())
         os.Exit(0)
     }
 
@@ -96,7 +101,7 @@ func main() {
         conf.Listen = ":" + conf.Listen
     }
 
-    log.Info("Starting wolssh version %s", version)
+    log.Info("Starting wolssh version %s", versionString())
     server := NewServer()
     server.LoadHostKeys(conf.HostKeys)
     server.AddUsers(conf.Users)
