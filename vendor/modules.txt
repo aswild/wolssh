@@ -3,7 +3,7 @@ github.com/aswild/bin2go/cmd
 github.com/aswild/bin2go
 # github.com/sabhiram/go-wol v0.0.0-20181027164823-5d8c3d0e40c5
 github.com/sabhiram/go-wol
-# golang.org/x/crypto v0.0.0-20190313024323-a1f597ede03a
+# golang.org/x/crypto v0.0.0-20190513172903-22d7a77e9e5f
 golang.org/x/crypto/ssh
 golang.org/x/crypto/curve25519
 golang.org/x/crypto/ed25519
@@ -11,7 +11,7 @@ golang.org/x/crypto/internal/chacha20
 golang.org/x/crypto/poly1305
 golang.org/x/crypto/ed25519/internal/edwards25519
 golang.org/x/crypto/internal/subtle
-# golang.org/x/sys v0.0.0-20190316082340-a2f829d7f35f
+# golang.org/x/sys v0.0.0-20190522044717-8097e1b27ff5
 golang.org/x/sys/cpu
 golang.org/x/sys/unix
 # gopkg.in/ini.v1 v1.42.0
