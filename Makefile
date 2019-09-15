@@ -1,6 +1,6 @@
 # Makefile for wolssh
 #
-# Copyright 2018 Allen Wild <allenwild93@gmail.com>
+# Copyright 2018-2019 Allen Wild <allenwild93@gmail.com>
 # SPDX-License-Identifier: MIT
 
 # go handles multicore compilation, make shouldn't try to do anything in parallel
@@ -40,7 +40,7 @@ mod:
 	$(GO) mod vendor -v
 
 modupdate:
-	$(GO) get -u
+	$(GO) get -u all
 	@$(MAKE) --no-print-directory mod
 
 deb: build
