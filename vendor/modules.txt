@@ -1,9 +1,27 @@
 # github.com/aswild/bin2go v1.0.0
+## explicit
 github.com/aswild/bin2go
 github.com/aswild/bin2go/cmd
+# github.com/davecgh/go-spew v1.1.1
+## explicit
+# github.com/gopherjs/gopherjs v0.0.0-20200217142428-fce0ec30dd00
+## explicit
+# github.com/kr/text v0.2.0
+## explicit
+# github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e
+## explicit
 # github.com/sabhiram/go-wol v0.0.0-20190608230442-1f746af28fd4
+## explicit
 github.com/sabhiram/go-wol
-# golang.org/x/crypto v0.0.0-20200117160349-530e935923ad
+# github.com/smartystreets/assertions v1.0.1
+## explicit
+# github.com/smartystreets/goconvey v1.6.4
+## explicit
+# github.com/stretchr/testify v1.5.1
+## explicit
+# golang.org/x/crypto v0.0.0-20200302210943-78000ba7a073
+## explicit
+golang.org/x/crypto/blowfish
 golang.org/x/crypto/chacha20
 golang.org/x/crypto/curve25519
 golang.org/x/crypto/ed25519
@@ -11,7 +29,14 @@ golang.org/x/crypto/ed25519/internal/edwards25519
 golang.org/x/crypto/internal/subtle
 golang.org/x/crypto/poly1305
 golang.org/x/crypto/ssh
-# golang.org/x/sys v0.0.0-20200122134326-e047566fdf82
+golang.org/x/crypto/ssh/internal/bcrypt_pbkdf
+# golang.org/x/sys v0.0.0-20200302150141-5c8b2ff67527
+## explicit
 golang.org/x/sys/cpu
-# gopkg.in/ini.v1 v1.51.1
+# gopkg.in/check.v1 v1.0.0-20200227125254-8fa46927fb4f
+## explicit
+# gopkg.in/ini.v1 v1.52.0
+## explicit
 gopkg.in/ini.v1
+# gopkg.in/yaml.v2 v2.2.8
+## explicit
