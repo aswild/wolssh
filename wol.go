@@ -13,7 +13,7 @@ import (
     "strconv"
     "strings"
 
-    sawol "github.com/sabhiram/go-wol"
+    sawol "github.com/sabhiram/go-wol/wol"
 )
 
 type BroadcastAddr struct {
